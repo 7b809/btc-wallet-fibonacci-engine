@@ -1,2 +1,4 @@
 bip-utils
 requests
+pymongo
+python-dotenv

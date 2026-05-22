@@ -353,7 +353,13 @@ def save_wallet_result(fib_index, fib_number, addresses_object):
 # =========================================================
 # MAIN GENERATOR
 # =========================================================
-def generate_wallets(start_index=None, stop_fib_number=None, languages=None, words=12):
+def generate_wallets(
+    start_index=None,
+    stop_fib_number=None,
+    languages=None,
+    words=12,
+    sleep_between_fib=10,  # <-- ADDED SLEEP CONTROL
+):
 
     logger.info("MAIN GENERATOR STARTED")
 
@@ -367,11 +373,11 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
 
     if start_index is None:
 
-        logger.info("START INDEX NONE => " "LOADING FROM DB")
+        logger.info("START INDEX NONE => LOADING FROM DB")
 
         start_index = load_last_state()
 
-    logger.info(f"START INDEX => " f"{start_index}")
+    logger.info(f"START INDEX => {start_index}")
 
     fib_gen = fibonacci(start_index)
 
@@ -387,11 +393,11 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
 
             fib_index, fib_number = next(fib_gen)
 
-            logger.info(f"CURRENT => " f"Index={fib_index} | " f"Fib={fib_number}")
+            logger.info(f"CURRENT => Index={fib_index} | Fib={fib_number}")
 
             if stop_fib_number is not None and fib_number > stop_fib_number:
 
-                logger.info(f"STOP LIMIT REACHED => " f"{fib_number}")
+                logger.info(f"STOP LIMIT REACHED => {fib_number}")
 
                 break
 
@@ -403,7 +409,7 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
 
                 logger.info("=" * 60)
 
-                logger.info(f"START LANGUAGE => " f"{language}")
+                logger.info(f"START LANGUAGE => {language}")
 
                 for word_length in [12, 15, 18, 21, 24]:
 
@@ -417,15 +423,15 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
                         fib_number=fib_number, language=language, words=word_length
                     )
 
-                    logger.info(f"GENERATING ADDRESSES => " f"{language}")
+                    logger.info(f"GENERATING ADDRESSES => {language}")
 
                     addresses = generate_bitcoin_addresses(mnemonic)
 
-                    logger.info(f"ADDRESSES GENERATED => " f"{language}")
+                    logger.info(f"ADDRESSES GENERATED => {language}")
 
                     address_list = list(addresses.values())
 
-                    logger.info(f"TOTAL ADDRESSES => " f"{len(address_list)}")
+                    logger.info(f"TOTAL ADDRESSES => {len(address_list)}")
 
                     if language not in all_language_addresses:
 
@@ -457,12 +463,10 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
                         concurrent.futures.wait(futures)
 
                     logger.info(
-                        f"BALANCE CHECK COMPLETED => " f"{language} | " f"{word_length}"
+                        f"BALANCE CHECK COMPLETED => " f"{language} | {word_length}"
                     )
 
-                    logger.info(
-                        f"COMPLETED => " f"{language} | " f"{word_length} words"
-                    )
+                    logger.info(f"COMPLETED => " f"{language} | {word_length} words")
 
             logger.info("SAVING COMPLETE RESULT")
 
@@ -476,7 +480,17 @@ def generate_wallets(start_index=None, stop_fib_number=None, languages=None, wor
 
             save_current_state(current_index=fib_index, fib_number=fib_number)
 
-            logger.info(f"ROUND COMPLETED => " f"Fib={fib_number}")
+            logger.info(f"ROUND COMPLETED => Fib={fib_number}")
+
+            # =================================================
+            # SLEEP BETWEEN EACH FIBONACCI INDEX
+            # =================================================
+            logger.info(
+                f"SLEEPING FOR {sleep_between_fib} SECONDS "
+                f"BEFORE NEXT FIBONACCI INDEX"
+            )
+
+            time.sleep(sleep_between_fib)
 
     except KeyboardInterrupt:
 
@@ -513,6 +527,7 @@ if __name__ == "__main__":
             "chinese_traditional",
         ],
         words=12,
+        sleep_between_fib=10,  # <-- CHANGE THIS VALUE
     )
 
     logger.info("APPLICATION FINISHED")
