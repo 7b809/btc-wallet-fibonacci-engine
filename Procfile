@@ -1,0 +1,1 @@
+worker: python btc_wallet_pipeline.py
