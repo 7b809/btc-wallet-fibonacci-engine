@@ -12,6 +12,7 @@ from pymongo import MongoClient
 
 from bip_utils import (
     Bip39MnemonicGenerator,
+    Bip39MnemonicValidator,
     Bip39Languages,
 )
 
@@ -40,7 +41,7 @@ logger.info("STEP 2 => LOADING MONGODB CONFIG")
 
 MONGO_URI = os.getenv("MONGO_URI")
 
-DB_NAME = "btc_wallets"
+DB_NAME = "btc_wallets_v1"
 
 STATE_COLLECTION = "generator_state"
 
@@ -79,7 +80,7 @@ with open("bip39_words.json", "r", encoding="utf-8") as file:
 
     WORD_DATA = json.load(file)
 
-logger.info(f"STEP 6 => WORD DATA LOADED => " f"{len(WORD_DATA)} languages")
+logger.info(f"STEP 6 => WORD DATA LOADED => {len(WORD_DATA)} languages")
 
 # =========================================================
 # LANGUAGE MAP
@@ -135,7 +136,7 @@ def send_telegram_message(message):
 
         response = requests.post(url, json=payload, timeout=30)
 
-        logger.info(f"TELEGRAM SENT => " f"{response.status_code}")
+        logger.info(f"TELEGRAM SENT => {response.status_code}")
 
     except Exception as e:
 
@@ -163,7 +164,7 @@ def save_positive_wallet(data):
 # =========================================================
 def serial_to_entropy(serial_number, entropy_bytes=16):
 
-    logger.info(f"GENERATING ENTROPY => " f"Serial={serial_number}")
+    logger.info(f"GENERATING ENTROPY => Serial={serial_number}")
 
     serial_bytes = str(serial_number).encode()
 
@@ -171,9 +172,31 @@ def serial_to_entropy(serial_number, entropy_bytes=16):
 
     entropy = hashed[:entropy_bytes]
 
-    logger.info(f"ENTROPY GENERATED => " f"{len(entropy)} bytes")
+    logger.info(f"ENTROPY GENERATED => {len(entropy)} bytes")
 
     return entropy
+
+
+# =========================================================
+# VALIDATE MNEMONIC CHECKSUM
+# =========================================================
+def validate_mnemonic(mnemonic, language):
+
+    try:
+
+        validator = Bip39MnemonicValidator(LANGUAGE_MAP[language])
+
+        is_valid = validator.IsValid(mnemonic)
+
+        logger.info(f"CHECKSUM VALIDATION => " f"{language} => {is_valid}")
+
+        return is_valid
+
+    except Exception as e:
+
+        logger.exception(f"CHECKSUM VALIDATION FAILED => {e}")
+
+        return False
 
 
 # =========================================================
@@ -182,7 +205,10 @@ def serial_to_entropy(serial_number, entropy_bytes=16):
 def generate_mnemonic_from_serial(serial_number, language="english", words=12):
 
     logger.info(
-        f"GENERATING MNEMONIC => " f"Serial={serial_number} | " f"Language={language}"
+        f"GENERATING MNEMONIC => "
+        f"Serial={serial_number} | "
+        f"Language={language} | "
+        f"Words={words}"
     )
 
     entropy_size_map = {
@@ -201,7 +227,19 @@ def generate_mnemonic_from_serial(serial_number, language="english", words=12):
 
     mnemonic = str(mnemonic)
 
-    logger.info(f"MNEMONIC GENERATED => " f"{language}")
+    logger.info(f"MNEMONIC GENERATED => {language}")
+
+    # =====================================================
+    # CHECKSUM VALIDATION
+    # =====================================================
+
+    is_valid = validate_mnemonic(mnemonic, language)
+
+    if not is_valid:
+
+        raise ValueError(f"INVALID CHECKSUM => " f"{language} => {mnemonic}")
+
+    logger.info(f"CHECKSUM VERIFIED SUCCESSFULLY => " f"{language}")
 
     return mnemonic
 
@@ -211,7 +249,7 @@ def generate_mnemonic_from_serial(serial_number, language="english", words=12):
 # =========================================================
 def save_current_state(current_serial):
 
-    logger.info(f"SAVING STATE => " f"Serial={current_serial}")
+    logger.info(f"SAVING STATE => Serial={current_serial}")
 
     state_data = {
         "_id": "wallet_generator_state",
@@ -256,7 +294,7 @@ def check_single_address(serial_number, language, word_length, address, mnemonic
 
         TOTAL_SCANNED += 1
 
-        logger.info(f"CHECKING ADDRESS => " f"{address}")
+        logger.info(f"CHECKING ADDRESS => {address}")
 
         result = get_wallet_info(address)
 
@@ -292,6 +330,8 @@ def check_single_address(serial_number, language, word_length, address, mnemonic
                 f"Serial Number: {serial_number}\n"
                 f"Language: {language}\n"
                 f"Words: {word_length}\n\n"
+                f"Mnemonic:\n"
+                f"{mnemonic}\n\n"
                 f"Address:\n"
                 f"{address}\n\n"
                 f"Confirmed: {confirmed}\n"
@@ -307,7 +347,7 @@ def check_single_address(serial_number, language, word_length, address, mnemonic
 
         else:
 
-            logger.info(f"NO CONFIRMED BALANCE => " f"{address}")
+            logger.info(f"NO CONFIRMED BALANCE => {address}")
 
     except Exception as e:
 
@@ -362,7 +402,7 @@ def generate_wallets(
 
     if start_serial is None:
 
-        logger.info("START SERIAL NONE => " "LOADING FROM DB")
+        logger.info("START SERIAL NONE => LOADING FROM DB")
 
         start_serial = load_last_state()
 
@@ -376,7 +416,7 @@ def generate_wallets(
 
         while True:
 
-            logger.info(f"CURRENT SERIAL => " f"{current_serial}")
+            logger.info(f"CURRENT SERIAL => {current_serial}")
 
             if stop_serial is not None and current_serial > stop_serial:
 
@@ -388,7 +428,7 @@ def generate_wallets(
 
                 logger.info("=" * 60)
 
-                logger.info(f"START LANGUAGE => " f"{language}")
+                logger.info(f"START LANGUAGE => {language}")
 
                 for word_length in [12, 15, 18, 21, 24]:
 
@@ -403,6 +443,8 @@ def generate_wallets(
                         language=language,
                         words=word_length,
                     )
+
+                    logger.info(f"MNEMONIC => {mnemonic}")
 
                     logger.info(f"GENERATING ADDRESSES => " f"{language}")
 
