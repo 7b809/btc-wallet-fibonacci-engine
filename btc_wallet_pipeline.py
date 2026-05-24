@@ -41,7 +41,7 @@ logger.info("STEP 2 => LOADING MONGODB CONFIG")
 
 MONGO_URI = os.getenv("MONGO_URI")
 
-DB_NAME = "btc_wallets_v1"
+DB_NAME = "btc_wallets_v2"
 
 STATE_COLLECTION = "generator_state"
 
