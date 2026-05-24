@@ -450,11 +450,27 @@ def generate_wallets(
 
                     addresses = generate_bitcoin_addresses(mnemonic)
 
+                    # =================================================
+                    # SKIP INVALID ADDRESS CHECKSUM RESULTS
+                    # =================================================
+                    if addresses is None:
+
+                        logger.warning(
+                            f"INVALID ADDRESS CHECKSUM => "
+                            f"SKIPPING => "
+                            f"Serial={current_serial} | "
+                            f"Language={language} | "
+                            f"Words={word_length}"
+                        )
+
+                        continue
+
                     logger.info(f"ADDRESSES GENERATED => " f"{language}")
 
                     address_list = list(addresses.values())
 
                     logger.info(f"TOTAL ADDRESSES => " f"{len(address_list)}")
+
 
                     logger.info("STARTING BALANCE CHECK")
 
