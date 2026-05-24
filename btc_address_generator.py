@@ -4,37 +4,13 @@ from bip_utils import (
     Bip49, Bip49Coins,
     Bip84, Bip84Coins,
     Bip86, Bip86Coins,
-    Bip44Changes,
-    BtcAddrDecoder
+    Bip44Changes
 )
-
-
-def is_valid_btc_address(address: str) -> bool:
-    """
-    Validate Bitcoin address checksum.
-
-    Returns:
-        bool
-    """
-
-    try:
-        BtcAddrDecoder.DecodeAddr(address)
-        return True
-
-    except Exception:
-        return False
 
 
 def generate_bitcoin_addresses(mnemonic, index=0):
     """
     Generate all major Bitcoin address types from a mnemonic.
-
-    If ANY generated address fails checksum validation,
-    return None.
-
-    Args:
-        mnemonic (str): BIP39 seed phrase
-        index (int): Address index
 
     Returns:
         dict | None
@@ -66,8 +42,8 @@ def generate_bitcoin_addresses(mnemonic, index=0):
             .ToAddress()
         )
 
-        if not is_valid_btc_address(legacy_address):
-            print("INVALID CHECKSUM => LEGACY ADDRESS")
+        if not legacy_address:
+            print("INVALID LEGACY ADDRESS")
             return None
 
         addresses["legacy"] = legacy_address
@@ -89,8 +65,8 @@ def generate_bitcoin_addresses(mnemonic, index=0):
             .ToAddress()
         )
 
-        if not is_valid_btc_address(p2sh_address):
-            print("INVALID CHECKSUM => P2SH SEGWIT ADDRESS")
+        if not p2sh_address:
+            print("INVALID P2SH ADDRESS")
             return None
 
         addresses["p2sh_segwit"] = p2sh_address
@@ -112,8 +88,8 @@ def generate_bitcoin_addresses(mnemonic, index=0):
             .ToAddress()
         )
 
-        if not is_valid_btc_address(native_segwit_address):
-            print("INVALID CHECKSUM => NATIVE SEGWIT ADDRESS")
+        if not native_segwit_address:
+            print("INVALID NATIVE SEGWIT ADDRESS")
             return None
 
         addresses["native_segwit"] = native_segwit_address
@@ -135,15 +111,12 @@ def generate_bitcoin_addresses(mnemonic, index=0):
             .ToAddress()
         )
 
-        if not is_valid_btc_address(taproot_address):
-            print("INVALID CHECKSUM => TAPROOT ADDRESS")
+        if not taproot_address:
+            print("INVALID TAPROOT ADDRESS")
             return None
 
         addresses["taproot"] = taproot_address
 
-        # =====================================================
-        # ALL CHECKSUMS VALID
-        # =====================================================
         return addresses
 
     except Exception as e:
@@ -151,7 +124,6 @@ def generate_bitcoin_addresses(mnemonic, index=0):
         print(f"ADDRESS GENERATION FAILED => {e}")
 
         return None
-
 
 # # =========================================================
 # # EXAMPLE USAGE
